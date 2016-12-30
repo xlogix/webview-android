@@ -1,7 +1,10 @@
 package com.fnplus.webview;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.CollapsingToolbarLayout;
@@ -10,7 +13,10 @@ import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.view.MotionEvent;
 import android.view.View;
+import android.webkit.CookieManager;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ImageView;
@@ -18,15 +24,20 @@ import android.widget.ProgressBar;
 
 /**
  * Created by Abhish3k on 12/30/2016.
+ * Simple webView
  */
 
 public class MainActivity extends AppCompatActivity {
 
+    private final static int FCR = 1;
+    private static final int FILE_CHOOSER_RESULT_CODE = 1;
     private String postUrl = "https://www.xda-developers.com/";
     private WebView webView;
     private ProgressBar progressBar;
     private float m_downX;
-    private ImageView imgHeader;
+    private String mCM;
+    private ValueCallback<Uri> mUploadMessage;
+    private ValueCallback<Uri[]> mUMA;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,7 +51,6 @@ public class MainActivity extends AppCompatActivity {
 
         webView = (WebView) findViewById(R.id.webView);
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
-        imgHeader = (ImageView) findViewById(R.id.backdrop);
 
         if (!TextUtils.isEmpty(getIntent().getStringExtra("postUrl"))) {
             postUrl = getIntent().getStringExtra("postUrl");
@@ -92,9 +102,41 @@ public class MainActivity extends AppCompatActivity {
         */
     }
 
+    @SuppressLint({"SetJavaScriptEnabled"})
     private void initWebView() {
         webView.setWebChromeClient(new MyWebChromeClient(this));
         webView.setWebViewClient(new WebViewClient() {
+
+            //For Android 4.1
+            public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType, String capture) {
+                mUploadMessage = uploadMsg;
+                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                i.setType("*/*");
+                MainActivity.this.startActivityForResult(Intent.createChooser(i, "File Chooser"), MainActivity.FILE_CHOOSER_RESULT_CODE);
+            }
+
+            //For Android 5.0+
+            public boolean onShowFileChooser(
+                    WebView webView, ValueCallback<Uri[]> filePathCallback,
+                    WebChromeClient.FileChooserParams fileChooserParams) {
+                if (mUMA != null) {
+                    mUMA.onReceiveValue(null);
+                }
+                mUMA = filePathCallback;
+                Intent contentSelectionIntent = new Intent(Intent.ACTION_GET_CONTENT);
+                contentSelectionIntent.addCategory(Intent.CATEGORY_OPENABLE);
+                contentSelectionIntent.setType("*/*");
+                Intent[] intentArray;
+                intentArray = new Intent[0];
+
+                Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
+                chooserIntent.putExtra(Intent.EXTRA_INTENT, contentSelectionIntent);
+                chooserIntent.putExtra(Intent.EXTRA_TITLE, "File Chooser");
+                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, intentArray);
+                startActivityForResult(chooserIntent, FCR);
+                return true;
+            }
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -121,7 +163,23 @@ public class MainActivity extends AppCompatActivity {
                 progressBar.setVisibility(View.GONE);
             }
         });
-        webView.clearCache(true);
+
+        // Accepts Cookies Now
+        CookieManager.getInstance().setAcceptCookie(true);
+        if (Build.VERSION.SDK_INT >= 21) {
+            webView.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
+        }
+
+        // Enable FileUpload
+        webView.getSettings().setAllowFileAccess(true);
+        webView.getSettings().setAllowFileAccessFromFileURLs(true);
+        // Enable Database
+        webView.getSettings().setDatabaseEnabled(true);
+        // Other Settings
+        webView.getSettings().setLoadsImagesAutomatically(true);
+        webView.getSettings().setAppCacheEnabled(true);
+
         webView.clearHistory();
         webView.getSettings().setJavaScriptEnabled(true);
         webView.setHorizontalScrollBarEnabled(false);
@@ -156,7 +214,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void renderPost() {
         webView.loadUrl(postUrl);
-
         // webView.loadUrl("file:///android_asset/sample.html");
     }
 
@@ -207,7 +264,5 @@ public class MainActivity extends AppCompatActivity {
             super();
             this.context = context;
         }
-
-
     }
 }
