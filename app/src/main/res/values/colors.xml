@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#3F51B5</color>
-    <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorPrimaryLight">#b4b4b4</color>
+    <!-- Toolbar -->
+    <color name="colorPrimary">#039BE5</color>
+    <!-- Status bar -->
+    <color name="colorPrimaryDark">#0288D1</color>
+    <!-- Navigation bar-->
+    <color name="navigationBarColor">#29b6f6</color>
+
+    <color name="colorAccentLight">#F8BBD0</color>
     <color name="colorAccent">#FF4081</color>
+    <color name="colorAccentDark">#c2185b</color>
 </resources>
